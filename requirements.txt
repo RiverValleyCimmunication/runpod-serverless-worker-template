@@ -1,0 +1,3 @@
+runpod>=1.7
+openvino>=2024.6
+numpy>=1.26
