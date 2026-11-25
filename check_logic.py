@@ -41,7 +41,18 @@ def _resolve(ps, batch):
     return resolved
 
 
-def measure(model_path, preprocess=None):
+def _stage(stage, name):
+    """Report a real stage of the check, if a callback was supplied.
+    Fire-and-forget: a broken callback must never fail the check."""
+    if stage is None:
+        return
+    try:
+        stage(name)
+    except Exception:
+        pass
+
+
+def measure(model_path, preprocess=None, stage=None):
     out = {"runs": False, "pace_per_sec": 0.0, "input": "", "error": "",
            "recipe": ""}
     try:
@@ -124,11 +135,16 @@ def measure(model_path, preprocess=None):
             sample = rng.random(resolved, dtype=np.float32)
         key = compiled.input(0)
 
+        # The model is loaded and compiled; the next passes are its
+        # first real runs.
+        _stage(stage, "running")
+
         # Warmup (sync, a few passes)
         for _ in range(3):
             compiled({key: sample})
 
         # --- formula element 3: async queue, timed ~4 seconds ---
+        _stage(stage, "measuring")
         jobs = 8
         queue = ov.AsyncInferQueue(compiled, jobs)
         done = 0
