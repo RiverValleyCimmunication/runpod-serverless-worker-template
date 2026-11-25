@@ -2,10 +2,10 @@
 """RunPod serverless worker for the Emulator check engine.
 
 Job input (one of):
-  {"model_b64": "<base64 ONNX bytes>"}   — small models; RunPod caps
-      the /runsync request at 20 MB, so raw files up to ~14 MB.
-  {"model_url": "https://.../model.onnx"} — the worker fetches the
-      file itself; for larger models staged at a URL by the service.
+    {"model_b64": "<base64 ONNX bytes>"}   — small models; RunPod caps
+        the /runsync request at 20 MB, so raw files up to ~14 MB.
+    {"model_url": "https://.../model.onnx"} — the worker fetches the
+        file itself; for larger models staged at a URL by the service.
 
 Returns the checker's JSON: {"runs", "pace_per_sec", "input",
 "error", "cpus", "engine"}. The model file is written to a temp path
@@ -40,7 +40,7 @@ def _fetch_to_temp(job_input):
             job_input["model_url"],
             headers={"User-Agent": "emulator-check-worker/1"})
         with urllib.request.urlopen(req, timeout=300) as r, \
-                open(path, "wb") as f:
+            open(path, "wb") as f:
             total = 0
             while True:
                 chunk = r.read(1024 * 1024)
@@ -60,7 +60,9 @@ def handler(job):
     path = None
     try:
         path = _fetch_to_temp(job_input)
-        return measure(path)
+        # Optional declared preprocessing ("imagenet") — the checker
+        # bakes it into the graph and the recipe on the result says so.
+        return measure(path, job_input.get("preprocess"))
     except Exception as e:
         return {"runs": False, "pace_per_sec": 0.0, "input": "",
                 "error": f"{type(e).__name__}: {e}"[:400]}
